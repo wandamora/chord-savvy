@@ -1,0 +1,43 @@
+type User @table {
+  displayName: String!
+  createdAt: Timestamp!
+  email: String
+  photoUrl: String
+}
+
+type Song @table {
+  title: String!
+  artist: String!
+  createdAt: Timestamp!
+  lyrics: String!
+  genre: String
+  youtubeLink: String
+  difficultyLevel: String
+}
+
+type Chord @table {
+  name: String!
+  createdAt: Timestamp!
+  diagramUrl: String
+}
+
+type SongChord @table(key: ["song", "chord"]) {
+  song: Song!
+  chord: Chord!
+  positionInSong: String!
+}
+
+type UserSongList @table {
+  user: User!
+  name: String!
+  createdAt: Timestamp!
+  updatedAt: Timestamp!
+  description: String
+}
+
+type UserSongListItem @table(key: ["userSongList", "song"]) {
+  userSongList: UserSongList!
+  song: Song!
+  position: Int!
+  userNotes: String
+}
