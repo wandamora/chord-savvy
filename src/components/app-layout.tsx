@@ -15,6 +15,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Guitar, Heart, Home, Sparkles } from 'lucide-react';
+import AuthButton from '@/components/auth-button';
 
 const navItems = [
   { href: '/', label: 'Browse Songs', icon: Home },
@@ -58,7 +59,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:h-16 md:px-6">
+        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm md:h-16 md:px-6">
           <div className="flex items-center gap-4">
              <div className="md:hidden">
                 <SidebarTrigger />
@@ -66,6 +67,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
              <h2 className="font-headline text-xl font-semibold hidden md:block">
               {getPageTitle()}
              </h2>
+          </div>
+          <div className="flex items-center gap-4">
+            <AuthButton />
           </div>
         </header>
         <main className="flex-1 p-4 md:p-6">{children}</main>

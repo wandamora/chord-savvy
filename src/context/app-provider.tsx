@@ -1,6 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from '@/context/auth-provider';
+import { getUserData, updateUserData } from '@/lib/firebase/db';
 
 interface AppContextType {
   favoriteSongs: string[];
@@ -16,42 +18,82 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [favoriteSongs, setFavoriteSongs] = useState<string[]>([]);
   const [knownChords, setKnownChords] = useState<string[]>(['C', 'G', 'Am', 'F']);
   const [isMounted, setIsMounted] = useState(false);
+  const { user } = useAuth();
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   useEffect(() => {
-    try {
-      const storedFavorites = localStorage.getItem('chordSavvy_favorites');
-      if (storedFavorites) {
-        setFavoriteSongs(JSON.parse(storedFavorites));
+    async function loadData() {
+      if (user) {
+        try {
+          const data = await getUserData(user.uid);
+          if (data) {
+            setFavoriteSongs(data.favoriteSongs || []);
+            setKnownChords(data.knownChords || ['C', 'G', 'Am', 'F']);
+          } else {
+            await updateUserData(user.uid, {
+              favoriteSongs: [],
+              knownChords: ['C', 'G', 'Am', 'F']
+            });
+          }
+        } catch (error) {
+          console.error("Failed to load user data from Firestore", error);
+        }
+      } else {
+        try {
+          const storedFavorites = localStorage.getItem('chordSavvy_favorites');
+          if (storedFavorites) {
+            setFavoriteSongs(JSON.parse(storedFavorites));
+          } else {
+            setFavoriteSongs([]);
+          }
+          const storedKnownChords = localStorage.getItem('chordSavvy_knownChords');
+          if (storedKnownChords) {
+            setKnownChords(JSON.parse(storedKnownChords));
+          } else {
+            setKnownChords(['C', 'G', 'Am', 'F']);
+          }
+        } catch (error) {
+          console.error("Failed to read from localStorage", error);
+        }
       }
-      const storedKnownChords = localStorage.getItem('chordSavvy_knownChords');
-      if (storedKnownChords) {
-        setKnownChords(JSON.parse(storedKnownChords));
-      }
-    } catch (error) {
-      console.error("Failed to read from localStorage", error);
+      setIsDataLoaded(true);
     }
+    
+    loadData();
     setIsMounted(true);
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    if (isMounted) {
+    if (!isDataLoaded || !isMounted) return;
+
+    if (user) {
+      updateUserData(user.uid, { favoriteSongs }).catch(error => {
+        console.error("Failed to update favoriteSongs in Firestore", error);
+      });
+    } else {
       try {
         localStorage.setItem('chordSavvy_favorites', JSON.stringify(favoriteSongs));
       } catch (error) {
         console.error("Failed to write to localStorage", error);
       }
     }
-  }, [favoriteSongs, isMounted]);
+  }, [favoriteSongs, isDataLoaded, isMounted, user]);
 
   useEffect(() => {
-    if (isMounted) {
+    if (!isDataLoaded || !isMounted) return;
+
+    if (user) {
+      updateUserData(user.uid, { knownChords }).catch(error => {
+        console.error("Failed to update knownChords in Firestore", error);
+      });
+    } else {
       try {
         localStorage.setItem('chordSavvy_knownChords', JSON.stringify(knownChords));
       } catch (error) {
         console.error("Failed to write to localStorage", error);
       }
     }
-  }, [knownChords, isMounted]);
+  }, [knownChords, isDataLoaded, isMounted, user]);
 
   const toggleFavoriteSong = (songId: string) => {
     setFavoriteSongs(prev =>

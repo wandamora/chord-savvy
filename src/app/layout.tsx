@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AppProvider } from '@/context/app-provider';
 import AppLayout from '@/components/app-layout';
+import { AuthProvider } from '@/context/auth-provider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -31,10 +32,12 @@ export default function RootLayout({
     <html lang="en" className={`dark ${inter.variable} ${spaceGrotesk.variable}`}>
       <head />
       <body className="font-body antialiased">
-        <AppProvider>
-          <AppLayout>{children}</AppLayout>
-          <Toaster />
-        </AppProvider>
+        <AuthProvider>
+          <AppProvider>
+            <AppLayout>{children}</AppLayout>
+            <Toaster />
+          </AppProvider>
+        </AuthProvider>
       </body>
     </html>
   );
