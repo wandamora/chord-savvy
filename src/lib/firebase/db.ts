@@ -4,6 +4,11 @@ import { db } from "./config";
 export interface UserData {
   favoriteSongs: string[];
   knownChords: string[];
+  reminderSettings?: {
+    enabled: boolean;
+    hour: number; // 0-23
+    timezone: string;
+  }
 }
 
 export const getUserData = async (uid: string): Promise<UserData | null> => {

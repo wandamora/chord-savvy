@@ -14,13 +14,14 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Guitar, Heart, Home, Sparkles } from 'lucide-react';
+import { Guitar, Heart, Home, Sparkles, Settings } from 'lucide-react';
 import AuthButton from '@/components/auth-button';
 
 const navItems = [
   { href: '/', label: 'Browse Songs', icon: Home },
   { href: '/favorites', label: 'Favorites', icon: Heart },
   { href: '/tools/chord-progression', label: 'AI Chord Tool', icon: Sparkles },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

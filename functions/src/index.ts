@@ -8,7 +8,6 @@
  */
 
 import { setGlobalOptions } from "firebase-functions";
-import { onRequest } from "firebase-functions/https";
 import { onSchedule } from "firebase-functions/scheduler";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
@@ -30,62 +29,82 @@ admin.initializeApp();
 // this will be the maximum concurrent request count.
 setGlobalOptions({ maxInstances: 10 });
 
-export const helloWorld = onRequest((request, response) => {
-  logger.info("Hello logs!", { structuredData: true });
-  response.send("Hello from Firebase!");
-});
-
 export const sendDailyPracticeReminders = onSchedule(
-  "0 9 * * *",
+  "0 * * * *",
   async () => {
     logger.info("Starting daily practice reminders job");
-    let nextPageToken: string | undefined;
 
-    do {
-      const listUsersResult = await admin.auth().listUsers(1000, nextPageToken);
+    const now = new Date();
 
-      let batch = admin.firestore().batch();
-      const mailCollection = admin.firestore().collection("mail");
-      let batchCount = 0;
+    // Query users with reminders enabled
+    const usersSnapshot = await admin.firestore()
+      .collection("users")
+      .where("reminderSettings.enabled", "==", true)
+      .get();
 
-      for (const userRecord of listUsersResult.users) {
-        if (userRecord.email) {
-          const mailDocRef = mailCollection.doc();
-          batch.set(mailDocRef, {
-            to: userRecord.email,
-            message: {
-              subject: "Time to Practice Guitar! 🎸",
-              text: "Hello! This is your daily reminder to pick up your " +
-                "guitar and practice those chords. Consistency is key!",
-              html: `
-                <h2>Time to Practice! 🎸</h2>
-                <p>Hello!</p>
-                <p>This is your daily reminder to pick up your guitar and
-                practice.</p>
-                <p>Keep up the great work. Consistency is key to mastering
-                those chords!</p>
-                <p>Best,<br>The Chord Savvy Team</p>
-              `,
-            },
-          });
-          batchCount++;
+    let batch = admin.firestore().batch();
+    const mailCollection = admin.firestore().collection("mail");
+    let batchCount = 0;
 
-          // Commit batch when reaching Firestore limit (500)
-          if (batchCount === 500) {
-            await batch.commit();
-            batch = admin.firestore().batch();
-            batchCount = 0;
+    for (const doc of usersSnapshot.docs) {
+      const userData = doc.data();
+      const settings = userData.reminderSettings;
+
+      if (!settings || !settings.timezone) continue;
+
+      const userTimezone = settings.timezone;
+      const preferredHour = settings.hour;
+
+      // Get current hour in user's timezone
+      try {
+        const formatter = new Intl.DateTimeFormat("en-US", {
+          hour: "2-digit",
+          hour12: false,
+          timeZone: userTimezone,
+        });
+
+        const formattedHour = formatter.format(now);
+        const currentLocalHour = parseInt(formattedHour, 10);
+
+        if (currentLocalHour === preferredHour) {
+          // Fetch user email from Auth
+          const userRecord = await admin.auth().getUser(doc.id);
+          if (userRecord.email) {
+            const mailDocRef = mailCollection.doc();
+            batch.set(mailDocRef, {
+              to: userRecord.email,
+              message: {
+                subject: "Time to Practice Guitar! 🎸",
+                text: "Hello! This is your daily reminder to pick up your " +
+                  "guitar and practice those chords. Consistency is key!",
+                html: `
+                  <h2>Time to Practice! 🎸</h2>
+                  <p>Hello!</p>
+                  <p>This is your daily reminder to pick up your guitar and
+                  practice.</p>
+                  <p>Keep up the great work. Consistency is key to mastering
+                  those chords!</p>
+                  <p>Best,<br>The Chord Savvy Team</p>
+                `,
+              },
+            });
+            batchCount++;
+
+            if (batchCount === 500) {
+              await batch.commit();
+              batch = admin.firestore().batch();
+              batchCount = 0;
+            }
           }
         }
+      } catch (error) {
+        logger.error(`Failed to process reminder for user ${doc.id}`, error);
       }
+    }
 
-      // Commit any remaining
-      if (batchCount > 0) {
-        await batch.commit();
-      }
-
-      nextPageToken = listUsersResult.pageToken;
-    } while (nextPageToken);
+    if (batchCount > 0) {
+      await batch.commit();
+    }
 
     logger.info("Finished daily practice reminders job");
   }
