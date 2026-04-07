@@ -1,5 +1,3 @@
-# Firebase Studio
+# Chord Savvy
 
-This is a NextJS starter in Firebase Studio.
-
-To get started, take a look at src/app/page.tsx.
+A NextJS app for guitar players to easily filter chord sheets based on preferred chords.
